@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>หน้าแรก - fahut</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0f0f1a;
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+    }
+
+    #lightningCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    #flash {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: white;
+      opacity: 0;
+      z-index: 20;
+      pointer-events: none;
+      transition: opacity 0.2s ease-out;
+    }
+
+    #rain {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      display: block; /* ฝนเปิดทันที */
+    }
+
+    .raindrop {
+      position: absolute;
+      width: 2px;
+      height: 20px;
+      background: linear-gradient(to bottom, transparent, rgba(173, 216, 230, 0.6));
+      animation: fall linear infinite;
+    }
+
+    @keyframes fall {
+      0% {
+        transform: translateY(-100px);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh);
+        opacity: 0;
+      }
+    }
+
+    #instructions {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.5;
+      z-index: 100;
+      pointer-events: none;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div class="top"></div>
+
+  <div class="middle center">
+    <a href="profile.html" class="main-btn">FAHUT</a>
+  </div>
+  <div class="bottom"></div>
+
+  <img src="hut.png" alt="รูปมุมล่างขวา" class="fixed-bottom-right" id="character" />
+
+  <canvas id="lightningCanvas"></canvas>
+  <div id="flash"></div>
+  <div id="rain"></div>
+
+  <script>
+    class LightningEffect {
+      constructor() {
+        this.canvas = document.getElementById('lightningCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.flash = document.getElementById('flash');
+        this.rain = document.getElementById('rain');
+        this.character = document.getElementById('character');
+
+        this.lightningBolts = [];
+        this.isRaining = true;
+
+        this.resizeCanvas();
+        this.addEventListeners();
+        this.createRain();
+        this.animate();
+      }
+
+      resizeCanvas() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      }
+
+      addEventListeners() {
+        window.addEventListener('resize', () => this.resizeCanvas());
+
+        this.character.addEventListener('click', (e) => {
+          const x = e.clientX;
+          const y = e.clientY;
+          this.createLightning(x, y);
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key.toLowerCase() === 'r') {
+            this.toggleRain();
+          }
+        });
+      }
+
+      toggleRain() {
+        this.isRaining = !this.isRaining;
+        this.rain.style.display = this.isRaining ? 'block' : 'none';
+      }
+
+      createRain() {
+        const count = 100;
+        for (let i = 0; i < count; i++) {
+          const drop = document.createElement('div');
+          drop.className = 'raindrop';
+          drop.style.left = Math.random() * 100 + '%';
+          drop.style.animationDuration = (Math.random() * 2 + 1) + 's';
+          drop.style.animationDelay = Math.random() * 2 + 's';
+          this.rain.appendChild(drop);
+        }
+      }
+
+      createLightning(x, y) {
+        const startX = Math.random() * this.canvas.width;
+        const startY = 0;
+        const segments = this.generateLightningPath(startX, startY, x, y);
+
+        const bolt = {
+          segments,
+          opacity: 1,
+          thickness: Math.random() * 2 + 2,
+        };
+
+        this.lightningBolts.push(bolt);
+        this.flashEffect();
+      }
+
+      generateLightningPath(x1, y1, x2, y2) {
+        const segments = [];
+        let currentX = x1;
+        let currentY = y1;
+
+        while (currentY < y2) {
+          const nextX = currentX + (Math.random() - 0.5) * 30;
+          const nextY = currentY + Math.random() * 20;
+          segments.push({ x1: currentX, y1: currentY, x2: nextX, y2: nextY });
+          currentX = nextX;
+          currentY = nextY;
+        }
+
+        return segments;
+      }
+
+      flashEffect() {
+        this.flash.style.opacity = '1';
+        setTimeout(() => {
+          this.flash.style.opacity = '0';
+        }, 100);
+      }
+
+      drawLightning() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.lightningBolts = this.lightningBolts.filter(bolt => bolt.opacity > 0.05);
+
+        for (const bolt of this.lightningBolts) {
+          this.ctx.beginPath();
+          this.ctx.strokeStyle = `rgba(255, 255, 255, ${bolt.opacity})`;
+          this.ctx.lineWidth = bolt.thickness;
+          for (const seg of bolt.segments) {
+            this.ctx.moveTo(seg.x1, seg.y1);
+            this.ctx.lineTo(seg.x2, seg.y2);
+          }
+          this.ctx.stroke();
+          bolt.opacity *= 0.92;
+        }
+      }
+
+      animate() {
+        this.drawLightning();
+        requestAnimationFrame(() => this.animate());
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      new LightningEffect();
+    });
+  </script>
+
+  <div id="instructions">
+    ⚡ คลิกที่รูปเพื่อเรียกสายฟ้า <br>
+    🌧️ กดปุ่ม <strong>R</strong> เพื่อเปิด/ปิดฝน
+  </div>
+</body>
+</html>
