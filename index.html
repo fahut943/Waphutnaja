@@ -47,7 +47,7 @@
       height: 100%;
       z-index: 5;
       pointer-events: none;
-      display: block; /* ฝนเปิดทันที */
+      display: block;
     }
 
     .raindrop {
@@ -111,9 +111,12 @@
         this.lightningBolts = [];
         this.isRaining = true;
 
+        this.cassDrops = [];
+
         this.resizeCanvas();
         this.addEventListeners();
         this.createRain();
+        this.createCassDrops(10);
         this.animate();
       }
 
@@ -136,6 +139,10 @@
             this.toggleRain();
           }
         });
+
+        window.addEventListener('mousedown', (e) => this.onMouseDown(e));
+        window.addEventListener('mouseup', (e) => this.onMouseUp(e));
+        window.addEventListener('mousemove', (e) => this.onMouseMove(e));
       }
 
       toggleRain() {
@@ -153,6 +160,56 @@
           drop.style.animationDelay = Math.random() * 2 + 's';
           this.rain.appendChild(drop);
         }
+      }
+
+      createCassDrops(number) {
+        for (let i = 0; i < number; i++) {
+          this.cassDrops.push({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * -window.innerHeight,
+            width: 50,
+            height: 50,
+            speed: 1 + Math.random() * 2,
+            dragging: false,
+            offsetX: 0,
+            offsetY: 0,
+            img: new Image(),
+          });
+          this.cassDrops[i].img.src = 'cass.png';
+        }
+      }
+
+      onMouseDown(e) {
+        for (let i = this.cassDrops.length - 1; i >= 0; i--) {
+          const drop = this.cassDrops[i];
+          if (
+            e.clientX >= drop.x &&
+            e.clientX <= drop.x + drop.width &&
+            e.clientY >= drop.y &&
+            e.clientY <= drop.y + drop.height
+          ) {
+            drop.dragging = true;
+            drop.offsetX = e.clientX - drop.x;
+            drop.offsetY = e.clientY - drop.y;
+            this.cassDrops.push(this.cassDrops.splice(i, 1)[0]);
+            break;
+          }
+        }
+      }
+
+      onMouseUp(e) {
+        this.cassDrops.forEach(drop => {
+          drop.dragging = false;
+        });
+      }
+
+      onMouseMove(e) {
+        this.cassDrops.forEach(drop => {
+          if (drop.dragging) {
+            drop.x = e.clientX - drop.offsetX;
+            drop.y = e.clientY - drop.offsetY;
+          }
+        });
       }
 
       createLightning(x, y) {
@@ -210,8 +267,22 @@
         }
       }
 
+      drawCassDrops() {
+        for (const drop of this.cassDrops) {
+          if (!drop.dragging) {
+            drop.y += drop.speed;
+            if (drop.y > window.innerHeight) {
+              drop.y = Math.random() * -100;
+              drop.x = Math.random() * window.innerWidth;
+            }
+          }
+          this.ctx.drawImage(drop.img, drop.x, drop.y, drop.width, drop.height);
+        }
+      }
+
       animate() {
         this.drawLightning();
+        this.drawCassDrops();
         requestAnimationFrame(() => this.animate());
       }
     }
